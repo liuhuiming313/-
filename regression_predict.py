@@ -201,7 +201,7 @@ config={
     "epochs":20,
     "momentum":0.9,
     "save_path":"model_save/best_model_0312.pth",
-    "rel_path":"pred_0312.csv"
+    "rel_path":"pred_submit.csv"
 }
 
 model=MyModel(inDim=feature_dim).to(device)
