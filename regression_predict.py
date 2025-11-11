@@ -1,8 +1,3 @@
-"""
-@Author:刘慧敏
-@Email:18800208042@163.com
-"""
-
 #在上一版的基础上进行改进
 #1.在mse_loss的基础上增加正则项，从而惩罚参数，防止过拟合
 #2.相关系数分析，选出关联度最高的几列；使用SelectKBest计算每一列与y列之间的相关系数，
@@ -12,15 +7,16 @@ import torch
 import numpy as np
 import csv
 import pandas as pd
+import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader,Dataset
 import torch.nn as nn
 from torch import optim
 import time
-import matplotlib.pyplot as plt
 from sklearn.feature_selection import SelectKBest,f_regression
 
-# file=pd.read_csv(train_file)
-# print(file.head())
+# 设置支持中文的字体
+plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'DejaVu Sans']
+plt.rcParams['axes.unicode_minus'] = False
 
 def mseLoss_with_reg(pred,target,model):
     loss=nn.MSELoss(reduction='mean')
@@ -141,7 +137,8 @@ def train_val(model,train_loader,val_loader,device,epochs,optimizer,loss,save_pa
         plt_val_loss.append(val_loss / val_loader.__len__())
 
         if val_loss<min_val_loss:   #这里记录的是每一个轮次的最小值
-            torch.save(model,save_path)
+            #torch.save(model,save_path)
+            torch.save(model.state_dict(), save_path)  # 只保存模型参数
             min_val_loss=val_loss
 
         print("[%03d/%03d] %2.2f sec(s) Trainloss: %.6f |valloss: %.6f" %\
@@ -153,8 +150,11 @@ def train_val(model,train_loader,val_loader,device,epochs,optimizer,loss,save_pa
     plt.legend(["train","val"])
     plt.show()
 
-def evaluate(save_path,test_loader,device,rel_path):#得出测试结果文件
-    model=torch.load(save_path).to(device)
+def evaluate(save_path,test_loader,device,rel_path,feature_dim):#得出测试结果文件
+    # 创建模型实例并加载状态字典
+    model = MyModel(inDim=feature_dim)
+    model.load_state_dict(torch.load(save_path, weights_only=False))
+    model = model.to(device)
     rel=[]
     with torch.no_grad():
         for x in test_loader:
@@ -187,12 +187,6 @@ train_loader=DataLoader(train_dataset,batch_size=batch_size,shuffle=True)
 val_loader=DataLoader(val_dataset,batch_size=batch_size,shuffle=True)
 test_loader=DataLoader(test_dataset,batch_size=1,shuffle=False)
 
-# for batch_x,batch_y in train_loader:
-#     print(batch_x,batch_y)
-# model=MyModel(inDim=93)
-# predy=model(batch_x)
-# print(predy,batch_y)
-
 device="cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
@@ -209,4 +203,4 @@ loss=mseLoss_with_reg
 optimizer=optim.SGD(model.parameters(),lr=config["lr"],momentum=config["momentum"])
 
 train_val(model,train_loader,val_loader,device,config["epochs"],optimizer,loss,config["save_path"])
-evaluate(config["save_path"],test_loader,device,config["rel_path"])
+evaluate(config["save_path"],test_loader,device,config["rel_path"],feature_dim)
